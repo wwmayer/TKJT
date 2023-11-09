@@ -65,13 +65,15 @@ public:
   //! Load CDP encoded data from the reader.
   Standard_Boolean Load1 (JtData_Reader& theReader)
   {
-    return myEncodedData = loadCDP1 (theReader);
+    myEncodedData = loadCDP1 (theReader);
+    return !!myEncodedData;
   }
 
   //! Load CDP2 encoded data from the reader.
   Standard_Boolean Load2 (JtData_Reader& theReader)
   {
-    return myEncodedData = loadCDP2 (theReader);
+    myEncodedData = loadCDP2 (theReader);
+    return !!myEncodedData;
   }
 
   //! Get expected count of output values.
