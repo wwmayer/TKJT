@@ -78,6 +78,8 @@ public:
   //! Can be called only before calling Decode.
   Jt_I32 GetOutValCount() const
   {
+    if (!myEncodedData)
+      return 0;
     return myEncodedData->GetOutValCount();
   }
 
