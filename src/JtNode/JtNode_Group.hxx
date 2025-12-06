@@ -24,6 +24,7 @@ class JtNode_Group : public JtNode_Base
 {
 public:
   //! Read this entity from a JT file.
+<<<<<<< HEAD
   Standard_EXPORT virtual Standard_Boolean Read (JtData_Reader& theReader) override;
 
   //! Dump this entity.
@@ -31,6 +32,15 @@ public:
 
   //! Bind other objects to the object.
   Standard_EXPORT virtual void BindObjects (const MapOfObjects& theObjectsMap) override;
+=======
+  Standard_EXPORT Standard_Boolean Read (JtData_Reader& theReader) Standard_OVERRIDE;
+
+  //! Dump this entity.
+  Standard_EXPORT Standard_Integer Dump (Standard_OStream& theStream) const Standard_OVERRIDE;
+
+  //! Bind other objects to the object.
+  Standard_EXPORT void BindObjects (const MapOfObjects& theObjectsMap) Standard_OVERRIDE;
+>>>>>>> 06a42da0079341d083645bc73fc945d8edc75cef
 
   //! Return list of children.
   const VectorOfObjects& Children() const { return myChildren; }
