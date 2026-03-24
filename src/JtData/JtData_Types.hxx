@@ -19,7 +19,11 @@
 
 #include <Standard_Type.hxx>
 #include <Standard_Macro.hxx>
+#include <Standard_Version.hxx>
 #include <JtData_Vector.hxx>
+#if OCC_VERSION_HEX >= 0x070800
+#include <Standard_HashUtils.hxx>
+#endif
 
 // Basic JT data types
 
@@ -139,11 +143,18 @@ public:
   Jt_I32 Hash (const Jt_I32 theUpper) const
     { return ((&data.codes.U32)[0] ^ (&data.codes.U32)[1] ^ (&data.codes.U32)[2] ^ (&data.codes.U32)[3]) % theUpper; }
 
+#if OCC_VERSION_HEX >= 0x070800
+  size_t operator()(const Jt_GUID& theKey) const noexcept
+    { return opencascade::hash<Jt_GUID>(theKey); }
+  size_t operator()(const Jt_GUID& theKey1, const Jt_GUID& theKey2) const
+    { return theKey1 == theKey2; }
+#else
   static Standard_Integer HashCode (const Jt_GUID& theKey, const Standard_Integer theUpper)
     { return theKey.Hash (theUpper); }
 
   static Standard_Boolean IsEqual (const Jt_GUID& theKey1, const Jt_GUID& theKey2)
     { return theKey1 == theKey2; }
+#endif
 
 protected:
   Jt_U64 U64 (int theIdx) const { return data.U64[theIdx]; }
