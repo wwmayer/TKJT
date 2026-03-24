@@ -17,7 +17,7 @@
 #ifndef _JtData_ByteSwap_HeaderFile
 #define _JtData_ByteSwap_HeaderFile
 
-#ifdef __clang__
+#ifdef __APPLE__
 // Mac OS X / Darwin features
 #include <libkern/OSByteOrder.h>
 #define bswap_16(x) OSSwapInt16(x)
