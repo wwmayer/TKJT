@@ -72,7 +72,7 @@ Standard_Boolean Jt_GUID::ToString (char* theString) const
       data.codes.U32, (Jt_U32) data.codes.U16[0], (Jt_U32) data.codes.U16[1],
       (Jt_U32) data.codes.U8[0], (Jt_U32) data.codes.U8[1], (Jt_U32) data.codes.U8[2], (Jt_U32) data.codes.U8[3],
       (Jt_U32) data.codes.U8[4], (Jt_U32) data.codes.U8[5], (Jt_U32) data.codes.U8[6], (Jt_U32) data.codes.U8[7]);
-#elif
+#else
   return GUIDStringLength ==
     sprintf (theString, "%08x-%04x-%04x-%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x",
       data.codes.U32, (Jt_U32) data.codes.U16[0], (Jt_U32) data.codes.U16[1],
