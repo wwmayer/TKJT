@@ -27,17 +27,10 @@ public:
   Standard_EXPORT JtAttribute_Material();
 
   //! Read this entity from a JT file.
-<<<<<<< HEAD
-  Standard_EXPORT virtual Standard_Boolean Read (JtData_Reader& theReader) override;
-
-  //! Dump this entity.
-  Standard_EXPORT virtual Standard_Integer Dump (Standard_OStream& theStream) const override;
-=======
   Standard_EXPORT Standard_Boolean Read (JtData_Reader& theReader) Standard_OVERRIDE;
 
   //! Dump this entity.
   Standard_EXPORT Standard_Integer Dump (Standard_OStream& theStream) const Standard_OVERRIDE;
->>>>>>> 06a42da0079341d083645bc73fc945d8edc75cef
 
   //! Return ambient color.
   const Jt_F32* AmbientColor()  const { return myAmbientColor;  }
