@@ -28,12 +28,34 @@ IMPLEMENT_OBJECT_CLASS(JtNode_Part, "Part Object",
 //=======================================================================
 Standard_Boolean JtNode_Part::Read (JtData_Reader& theReader)
 {
+  if (theReader.Model()->MajorVersion() >= 10)
+    return ReadV10 (theReader);
+
+  // Legacy path: JT 8.x / 9.x
   Jt_I16 aVersion;
   Jt_I32 aReserved;
   return JtNode_MetaData::Read (theReader)
       && theReader.ReadI16 (aVersion)
       && theReader.ReadI32 (aReserved);
 }
+
+//=======================================================================
+//function : ReadV10
+//purpose  : Read JT 10+ Part Node Element (spec §6.1.1.5, Figure 28)
+//           Meta Data Node Data | U8 Version | I32 Empty Field
+//=======================================================================
+Standard_Boolean JtNode_Part::ReadV10 (JtData_Reader& theReader)
+{
+  if (!JtNode_MetaData::ReadV10 (theReader))
+    return Standard_False;
+
+  Jt_U8  aVersion;
+  Jt_I32 aEmptyField;
+  return theReader.ReadU8  (aVersion)
+      && theReader.ReadI32 (aEmptyField);
+}
+
+
 
 //=======================================================================
 //function : Dump

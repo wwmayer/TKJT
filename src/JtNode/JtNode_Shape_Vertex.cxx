@@ -30,6 +30,10 @@ IMPLEMENT_OBJECT_CLASS(JtNode_Shape_Vertex, "Vertex Shape Object",
 //=======================================================================
 Standard_Boolean JtNode_Shape_Vertex::Read (JtData_Reader &theReader)
 {
+  if (theReader.Model()->MajorVersion() >= 10)
+    return ReadV10 (theReader);
+
+  // Legacy path: JT 8.x / 9.x
   if (!JtNode_Shape_Base::Read (theReader))
     return Standard_False;
 
@@ -66,6 +70,24 @@ Standard_Boolean JtNode_Shape_Vertex::Read (JtData_Reader &theReader)
 
   return Standard_True;
 }
+
+//=======================================================================
+//function : ReadV10
+//purpose  : Read JT 10+ Vertex Shape Data (spec §6.1.1.10.2, Figure 39)
+//           Base Shape Data | U8 Version | U64 Vertex Binding
+//=======================================================================
+Standard_Boolean JtNode_Shape_Vertex::ReadV10 (JtData_Reader& theReader)
+{
+  if (!JtNode_Shape_Base::ReadV10 (theReader))
+    return Standard_False;
+
+  Jt_U8  aVersion;
+  Jt_U64 aVertexBinding;
+  return theReader.ReadU8  (aVersion)
+      && theReader.ReadU64 (aVertexBinding);
+}
+
+
 
 //=======================================================================
 //function : Dump

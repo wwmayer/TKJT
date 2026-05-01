@@ -29,16 +29,41 @@ IMPLEMENT_OBJECT_CLASS(JtNode_Instance, "Instance Object",
 //=======================================================================
 Standard_Boolean JtNode_Instance::Read (JtData_Reader& theReader)
 {
+  if (theReader.Model()->MajorVersion() >= 10)
+    return ReadV10 (theReader);
+
+  // Legacy path: JT 8.x / 9.x
   if (!JtNode_Base::Read (theReader))
     return Standard_False;
 
-  Jt_I16 aVersion;
-  if (theReader.Model()->MajorVersion() > 8
-  && !theReader.ReadI16 (aVersion))
+  if (theReader.Model()->MajorVersion() >= 9)
+  {
+    Jt_I16 aVersion;
+    if (!theReader.ReadI16 (aVersion))
+      return Standard_False;
+  }
+
+  return JtData_DeferredObject::Read (theReader, myObject);
+}
+
+//=======================================================================
+//function : ReadV10
+//purpose  : Read JT 10+ Instance Node Element (spec §6.1.1.4, Figure 27)
+//           Base Node Data | U8 Version | I32 Child Node Object ID
+//=======================================================================
+Standard_Boolean JtNode_Instance::ReadV10 (JtData_Reader& theReader)
+{
+  if (!JtNode_Base::ReadV10 (theReader))
+    return Standard_False;
+
+  Jt_U8 aVersion;
+  if (!theReader.ReadU8 (aVersion))
     return Standard_False;
 
   return JtData_DeferredObject::Read (theReader, myObject);
 }
+
+
 
 //=======================================================================
 //function : Dump

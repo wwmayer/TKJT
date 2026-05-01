@@ -58,6 +58,10 @@ JtAttribute_Material::JtAttribute_Material()
 //=======================================================================
 Standard_Boolean JtAttribute_Material::Read (JtData_Reader& theReader)
 {
+  if (theReader.Model()->MajorVersion() >= 10)
+    return ReadV10 (theReader);
+
+  // Legacy path: JT 8.x / 9.x
   if (!JtAttribute_Base::Read (theReader))
     return Standard_False;
 
@@ -79,6 +83,38 @@ Standard_Boolean JtAttribute_Material::Read (JtData_Reader& theReader)
 
   return Standard_True;
 }
+
+//=======================================================================
+//function : ReadV10
+//purpose  : Read JT 10+ Material Attribute Element (spec §6.1.2.2, Figure 47)
+//           Base Attribute Data | I8 Version | U16 Data Flags |
+//           RGBA Ambient | RGBA Diffuse+Alpha | RGBA Specular | RGBA Emission |
+//           F32 Shininess | F32 Reflectivity | F32 Bumpiness
+//           Note: all RGBA always full 4xF32 in JT 10 (no compressed single-F32 shorthand).
+//=======================================================================
+Standard_Boolean JtAttribute_Material::ReadV10 (JtData_Reader& theReader)
+{
+  if (!JtAttribute_Base::ReadV10 (theReader))
+    return Standard_False;
+
+  Jt_U8  aVersion;
+  Jt_F32 aBumpiness;
+  if (!theReader.ReadU8  (aVersion)
+   || !theReader.ReadU16 (myDataFlags)
+   || !readColor (theReader, myAmbientColor)
+   || !readColor (theReader, myDiffuseColor)
+   || !readColor (theReader, mySpecularColor)
+   || !readColor (theReader, myEmissionColor)
+   || !theReader.ReadF32 (myShininess)
+   || !theReader.ReadF32 (myReflectivity)
+   || !theReader.ReadF32 (aBumpiness))
+    return Standard_False;
+
+  myVersion = aVersion;
+  return Standard_True;
+}
+
+
 
 //=======================================================================
 //function : Dump

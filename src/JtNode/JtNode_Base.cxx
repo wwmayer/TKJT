@@ -29,13 +29,19 @@ IMPLEMENT_OBJECT_CLASS(JtNode_Base, "Base node",
 //=======================================================================
 Standard_Boolean JtNode_Base::Read (JtData_Reader& theReader)
 {
+  if (theReader.Model()->MajorVersion() >= 10)
+    return ReadV10 (theReader);
+
+  // Legacy path: JT 8.x / 9.x
   if (!JtData_Object::Read (theReader))
     return Standard_False;
 
-  Jt_I16 aVersion;
-  if (theReader.Model()->MajorVersion() > 8
-  && !theReader.ReadI16 (aVersion))
-    return Standard_False;
+  if (theReader.Model()->MajorVersion() >= 9)
+  {
+    Jt_I16 aVersion;
+    if (!theReader.ReadI16 (aVersion))
+      return Standard_False;
+  }
 
   Jt_U32 aFlags;
   if (!theReader.ReadU32 (aFlags))
@@ -43,6 +49,28 @@ Standard_Boolean JtNode_Base::Read (JtData_Reader& theReader)
 
   return JtData_DeferredObject::ReadVec (theReader, myAttributes);
 }
+
+//=======================================================================
+//function : ReadV10
+//purpose  : Read JT 10+ Base Node Data (spec §6.1.1.1.1)
+//           Base Node Data: U8 Version | U32 Attribute Flags | I32 Attribute Count | I32[count]
+//=======================================================================
+Standard_Boolean JtNode_Base::ReadV10 (JtData_Reader& theReader)
+{
+  if (!JtData_Object::Read (theReader))
+    return Standard_False;
+
+  Jt_U8  aVersion;
+  Jt_U32 aFlags;
+  if (!theReader.ReadU8  (aVersion))
+    return Standard_False;
+  if (!theReader.ReadU32 (aFlags))
+    return Standard_False;
+
+  return JtData_DeferredObject::ReadVec (theReader, myAttributes);
+}
+
+
 
 //=======================================================================
 //function : Dump

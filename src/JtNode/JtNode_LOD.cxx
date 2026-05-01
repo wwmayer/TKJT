@@ -28,6 +28,10 @@ IMPLEMENT_OBJECT_CLASS(JtNode_LOD, "LOD Object",
 //=======================================================================
 Standard_Boolean JtNode_LOD::Read (JtData_Reader& theReader)
 {
+  if (theReader.Model()->MajorVersion() >= 10)
+    return ReadV10 (theReader);
+
+  // Legacy path: JT 8.x / 9.x
   if (!JtNode_Group::Read (theReader))
     return Standard_False;
 
@@ -41,6 +45,23 @@ Standard_Boolean JtNode_LOD::Read (JtData_Reader& theReader)
   return theReader.ReadVec (aReservedVec)
       && theReader.ReadF32 (aReservedVal);
 }
+
+//=======================================================================
+//function : ReadV10
+//purpose  : Read JT 10+ LOD Node Data (spec §6.1.1.7.1, Figure 32)
+//           LOD Node Data: Group Node Data | U8 Version
+//           Note: reserved vec/val fields present in JT 9.x are removed in JT 10.
+//=======================================================================
+Standard_Boolean JtNode_LOD::ReadV10 (JtData_Reader& theReader)
+{
+  if (!JtNode_Group::ReadV10 (theReader))
+    return Standard_False;
+
+  Jt_U8 aVersion;
+  return theReader.ReadU8 (aVersion);
+}
+
+
 
 //=======================================================================
 //function : Dump

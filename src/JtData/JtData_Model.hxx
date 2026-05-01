@@ -51,10 +51,10 @@ public:
 
   //! Lookup offset of a segment in TOCs of this model and its ancestor models.
   Standard_EXPORT Handle(JtData_Model) FindSegment (const Jt_GUID& theGUID,
-                                                          Jt_I32&  theOffset) const;
+                                                          Jt_I64&  theOffset) const;
 
   //! Read object from a late loaded segment.
-  Standard_EXPORT Handle(JtData_Object) ReadSegment (const Jt_I32 theOffset) const;
+  Standard_EXPORT Handle(JtData_Object) ReadSegment (const Jt_I64 theOffset) const;
 
   //! Dump this entity.
   Standard_EXPORT Standard_Integer Dump (Standard_OStream& theStream) const;
@@ -71,6 +71,11 @@ public:
   //! Return minor version of Jt file.
   Standard_Integer                  MinorVersion() const { return myMinorVersion; }
 
+  //! Return the end position (exclusive) of the element currently being parsed.
+  //! Set by readElement before calling Read(); used by node parsers to guard optional fields.
+  Standard_Size CurrentElementEnd() const { return myCurrentElementEnd; }
+  void          SetCurrentElementEnd (Standard_Size theEnd) { myCurrentElementEnd = theEnd; }
+
   DEFINE_STANDARD_RTTIEXT(JtData_Model,Standard_Transient)
 
 protected:
@@ -78,11 +83,11 @@ protected:
   Standard_Boolean open (std::ifstream& aFile) const;
 
   //! Read TOC from the JT file.
-  Standard_Boolean readTOC (std::ifstream& theFile, const Jt_I32 theOffset);
+  Standard_Boolean readTOC (std::ifstream& theFile, const Jt_I64 theOffset);
 
   //! Read object(s) from a JT file segment.
   Handle(JtData_Object) readSegment (std::ifstream&           theFile,
-                                     const Jt_I32             theOffset,
+                                     const Jt_I64             theOffset,
                                      const Standard_Boolean   theIsLSG) const;
   //! Read LSG segment data.
   Standard_Boolean readLSGData  (JtData_Reader&               theReader,
@@ -107,7 +112,10 @@ protected:
   Standard_Integer           myMajorVersion;
   Standard_Integer           myMinorVersion;
 
-  NCollection_DataMap <Jt_GUID, Jt_I32, Jt_GUID> myTOC;
+  NCollection_DataMap <Jt_GUID, Jt_I64, Jt_GUID> myTOC;
+
+  Standard_Size myCurrentElementEnd; // set by readElement, 0 = unknown
 };
+
 
 #endif // _JtData_Model_HeaderFile

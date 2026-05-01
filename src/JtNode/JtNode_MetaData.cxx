@@ -28,10 +28,30 @@ IMPLEMENT_OBJECT_CLASS(JtNode_MetaData, "MetaData Object",
 //=======================================================================
 Standard_Boolean JtNode_MetaData::Read (JtData_Reader& theReader)
 {
+  if (theReader.Model()->MajorVersion() >= 10)
+    return ReadV10 (theReader);
+
+  // Legacy path: JT 8.x / 9.x
   Jt_I16 aVersion;
   return JtNode_Group::Read (theReader)
-      && theReader.ReadI16  (aVersion);
+      && theReader.ReadI16 (aVersion);
 }
+
+//=======================================================================
+//function : ReadV10
+//purpose  : Read JT 10+ Meta Data Node Data (spec §6.1.1.6.1, Figure 30)
+//           Meta Data Node Data: Group Node Data | U8 Version
+//=======================================================================
+Standard_Boolean JtNode_MetaData::ReadV10 (JtData_Reader& theReader)
+{
+  if (!JtNode_Group::ReadV10 (theReader))
+    return Standard_False;
+
+  Jt_U8 aVersion;
+  return theReader.ReadU8 (aVersion);
+}
+
+
 
 //=======================================================================
 //function : Dump

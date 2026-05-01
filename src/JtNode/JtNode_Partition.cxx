@@ -30,13 +30,19 @@ Standard_Boolean JtNode_Partition::Read (JtData_Reader& theReader)
 {
   myModel = theReader.Model();
 
-  Jt_I32 aFlags;
-  if (!JtNode_Group::Read     (theReader)
-   || !theReader.ReadI32      (aFlags)
-   || !theReader.ReadMbString (myFileName))
-  {
+  if (theReader.Model()->MajorVersion() >= 10)
+    return ReadV10 (theReader);
+
+  // Legacy path: JT 8.x / 9.x
+  if (!JtNode_Group::Read (theReader))
     return Standard_False;
-  }
+
+  Jt_I32 aFlags;
+  if (!theReader.ReadI32 (aFlags))
+    return Standard_False;
+
+  if (!theReader.ReadMbString (myFileName))
+    return Standard_False;
 
   const Standard_Boolean hasUntransformedBndBox = ((aFlags & 1) != 0);
 
@@ -52,14 +58,58 @@ Standard_Boolean JtNode_Partition::Read (JtData_Reader& theReader)
    || !theReader.ReadArray (aVrtxRange)
    || !theReader.ReadArray (aNodeRange)
    || !theReader.ReadArray (aPolyRange))
-  {
     return Standard_False;
-  }
 
-  if (hasUntransformedBndBox
-   && !theReader.ReadUniformStruct<Jt_F32> (aBBox))
-  {
+  if (hasUntransformedBndBox)
+    if (!theReader.ReadUniformStruct<Jt_F32> (aBBox))
+      return Standard_False;
+
+  return Standard_True;
+}
+
+//=======================================================================
+//function : ReadV10
+//purpose  : Read JT 10+ Partition Node Data (spec §6.1.1.3, Figure 22/23)
+//           After Group Node Data: U8 Version | I32 Flags | MbString FileName |
+//           BBoxF32 TransformedBBox | F32 Area | I32[2] VertexRange |
+//           I32[2] NodeRange | I32[2] PolyRange | (optional) BBoxF32 UntransBBox
+//=======================================================================
+Standard_Boolean JtNode_Partition::ReadV10 (JtData_Reader& theReader)
+{
+  if (!JtNode_Group::ReadV10 (theReader))
     return Standard_False;
+
+  Jt_U8  aVersion;
+  Jt_I32 aFlags;
+  if (!theReader.ReadU8  (aVersion)
+   || !theReader.ReadI32 (aFlags))
+    return Standard_False;
+
+  if (!theReader.ReadMbString (myFileName))
+    return Standard_False;
+
+  const Standard_Boolean hasUntransformedBndBox = ((aFlags & 1) != 0);
+
+  Jt_BBoxF32 aBBox;
+  Jt_F32     anArea;
+  Jt_I32     aVrtxRange[2];
+  Jt_I32     aNodeRange[2];
+  Jt_I32     aPolyRange[2];
+  if (!theReader.ReadUniformStruct<Jt_F32> (aBBox)
+   || !theReader.ReadF32   (anArea)
+   || !theReader.ReadArray (aVrtxRange)
+   || !theReader.ReadArray (aNodeRange)
+   || !theReader.ReadArray (aPolyRange))
+    return Standard_False;
+
+  if (hasUntransformedBndBox)
+  {
+    // Some JT 10 writers set this flag on root partitions but omit the bbox data.
+    // Guard against reading past the end of the element.
+    const Standard_Size anElemEnd = theReader.Model()->CurrentElementEnd();
+    if (anElemEnd == 0 || theReader.GetPosition() + sizeof(Jt_BBoxF32) <= anElemEnd)
+      if (!theReader.ReadUniformStruct<Jt_F32> (aBBox))
+        return Standard_False;
   }
 
   return Standard_True;

@@ -28,16 +28,41 @@ IMPLEMENT_OBJECT_CLASS(JtProperty_String, "String Object",
 //=======================================================================
 Standard_Boolean JtProperty_String::Read (JtData_Reader& theReader)
 {
+  if (theReader.Model()->MajorVersion() >= 10)
+    return ReadV10 (theReader);
+
+  // Legacy path: JT 8.x / 9.x
   if (!JtProperty_Base::Read (theReader))
     return Standard_False;
 
-  Jt_I16 aVersion;
-  if (theReader.Model()->MajorVersion() > 8
-  && !theReader.ReadI16 (aVersion))
+  if (theReader.Model()->MajorVersion() > 8)
+  {
+    Jt_I16 aVersion;
+    if (!theReader.ReadI16 (aVersion))
+      return Standard_False;
+  }
+
+  return theReader.ReadMbString (myValue);
+}
+
+//=======================================================================
+//function : ReadV10
+//purpose  : Read JT 10+ String Property Atom Element (spec Figure 71)
+//           Base Property Atom Data | U8 Version | MbString Value
+//=======================================================================
+Standard_Boolean JtProperty_String::ReadV10 (JtData_Reader& theReader)
+{
+  if (!JtProperty_Base::ReadV10 (theReader))
+    return Standard_False;
+
+  Jt_U8 aVersion;
+  if (!theReader.ReadU8 (aVersion))
     return Standard_False;
 
   return theReader.ReadMbString (myValue);
 }
+
+
 
 //=======================================================================
 //function : Dump

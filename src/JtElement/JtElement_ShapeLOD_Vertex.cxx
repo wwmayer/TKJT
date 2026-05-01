@@ -209,7 +209,19 @@ Standard_Size JtElement_ShapeLOD_Vertex::VertexBinding2::NbTextCoordComponents
 //=======================================================================
 Standard_Boolean JtElement_ShapeLOD_Vertex::Read (JtData_Reader& theReader)
 {
+  if (theReader.Model()->MajorVersion() >= 10)
+    return ReadV10 (theReader);
+
   return readVertexShapeLODData (theReader);
+}
+
+//=======================================================================
+//function : ReadV10
+//purpose  : Read this entity from a JT 10+ file
+//=======================================================================
+Standard_Boolean JtElement_ShapeLOD_Vertex::ReadV10 (JtData_Reader& theReader)
+{
+  return readVertexShapeLODDataV10 (theReader);
 }
 
 //=======================================================================
@@ -274,6 +286,43 @@ Standard_Boolean JtElement_ShapeLOD_Vertex::readVertexShapeLODData (
       // TODO: Read TopoMesh Compressed Rep Data
       return Standard_True;
   }
+}
+
+//=======================================================================
+//function : readVertexShapeLODDataV10
+//purpose  : Read Vertex Shape LOD Data collection for JT 10+
+//           Base Shape LOD Data   : U8 version
+//           Vertex Shape LOD Data : U8 version + U64 Vertex Bindings
+//           TopoMesh LOD Data     : U8 version + U32 Vertex Records Object ID
+//           TopoMesh Topo Compressed LOD Data : U8 version + rep data
+//=======================================================================
+Standard_Boolean JtElement_ShapeLOD_Vertex::readVertexShapeLODDataV10 (
+  JtData_Reader&   theReader,
+  Standard_Boolean theIsTriStripSet)
+{
+  myIndices.Free();
+  myVertices.Free();
+  myNormals.Free();
+
+  Jt_U8 aVersion, aMeshLODVersion, aTopoCompVersion;
+  Jt_U32 aVertexRecordsObjID;
+  VertexBinding2 aVertexBinding;
+
+  if (!JtElement_ShapeLOD_Base::ReadV10 (theReader)  // JtData_Object::Read + U8 base version
+   || !theReader.ReadU8 (aVersion)                    // Vertex Shape LOD Data version
+   || !aVertexBinding.Read (theReader)                // U64 Vertex Bindings
+   || !theReader.ReadU8 (aMeshLODVersion)             // TopoMesh LOD Data version
+   || !theReader.ReadU32 (aVertexRecordsObjID)        // Vertex Records Object ID
+   || !theReader.ReadU8 (aTopoCompVersion))           // TopoMesh Topologically Compressed LOD Data version
+  {
+    return Standard_False;
+  }
+
+  if (theIsTriStripSet)
+    return readTopologicallyCompressedData (theReader);
+
+  // TODO: Read TopoMesh Compressed Rep Data for non-TriStripSet shapes
+  return Standard_True;
 }
 
 //=======================================================================

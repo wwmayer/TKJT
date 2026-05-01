@@ -17,6 +17,7 @@
 #include <JtData_Model.hxx>
 #include <JtData_FileReader.hxx>
 #include <JtData_Inflate.hxx>
+#include <JtData_XZDecompress.hxx>
 
 #include <JtData_Message.hxx>
 
@@ -46,7 +47,7 @@ IMPLEMENT_STANDARD_RTTIEXT(JtData_Model, MMgt_TShared)
 //=======================================================================
 JtData_Model::JtData_Model(const TCollection_ExtendedString &theFileName,
                            const Handle(JtData_Model) & theParent)
-    : myParent(theParent), myFileName(theFileName), myIsFileLE(Standard_False), myMajorVersion(0), myMinorVersion(0) {}
+    : myParent(theParent), myFileName(theFileName), myIsFileLE(Standard_False), myMajorVersion(0), myMinorVersion(0), myCurrentElementEnd(0) {}
 
 //=======================================================================
 //function : Init
@@ -103,11 +104,26 @@ Handle(JtNode_Partition) JtData_Model::Init()
   TRACE("Info: Byte order = " + (myIsFileLE ? "LE" : "BE"));
 
   // Read reserved field, TOC offset, LSG Segment ID
-  Jt_I32 aReservedField, aTOCOffset;
+  // JT 10.x changed the TOC offset field from I32 to U64 (header grows by 4 bytes).
+  Jt_I32 aReservedField;
+  Jt_I64 aTOCOffset = 0;
   Jt_GUID anLSGSegmentGUID;
   {
     JtData_FileReader aReader(aFile, this);
-    if (!aReader.ReadI32(aReservedField) || !aReader.ReadI32(aTOCOffset) || !aReader.ReadGUID(anLSGSegmentGUID))
+    Standard_Boolean aOk;
+    if (myMajorVersion >= 10)
+    {
+      Jt_U64 aTOCOffsetU64 = 0;
+      aOk = aReader.ReadI32(aReservedField) && aReader.ReadU64(aTOCOffsetU64) && aReader.ReadGUID(anLSGSegmentGUID);
+      aTOCOffset = (Jt_I64)aTOCOffsetU64;
+    }
+    else
+    {
+      Jt_I32 aTOCOffset32 = 0;
+      aOk = aReader.ReadI32(aReservedField) && aReader.ReadI32(aTOCOffset32) && aReader.ReadGUID(anLSGSegmentGUID);
+      aTOCOffset = aTOCOffset32;
+    }
+    if (!aOk)
     {
       ALARM("Error: Failed to read TOC offset and LSG segment ID");
       return Handle(JtNode_Partition)();
@@ -122,7 +138,7 @@ Handle(JtNode_Partition) JtData_Model::Init()
   }
 
   // Find and read LSG segment
-  Jt_I32 anLSGSegmentOffset;
+  Jt_I64 anLSGSegmentOffset = 0;
   if (!myTOC.Find(anLSGSegmentGUID, anLSGSegmentOffset))
   {
     ALARM("Error: No LSG segment");
@@ -130,7 +146,7 @@ Handle(JtNode_Partition) JtData_Model::Init()
   }
   else
   {
-    TRACE("Info: LSG segment is found at offset " + anLSGSegmentOffset);
+    TRACE("Info: LSG segment is found at offset " + (Standard_Integer)anLSGSegmentOffset);
   }
 
   Handle(JtData_Object) aRootNode = readSegment(aFile, anLSGSegmentOffset, Standard_True);
@@ -161,7 +177,7 @@ Standard_Boolean JtData_Model::open(ifstream &aFile) const
 //function : readTOC
 //purpose  : Read TOC from the JT file
 //=======================================================================
-Standard_Boolean JtData_Model::readTOC(std::ifstream &theFile, const Jt_I32 theOffset)
+Standard_Boolean JtData_Model::readTOC(std::ifstream &theFile, const Jt_I64 theOffset)
 {
   JtData_FileReader aReader(theFile, this, theOffset);
 
@@ -177,10 +193,25 @@ Standard_Boolean JtData_Model::readTOC(std::ifstream &theFile, const Jt_I32 theO
   while (aCount--)
   {
     // Read Segment ID, offset, length, attributes
+    // JT 10.x uses U64 offset + U32 length; earlier versions use I32 + I32.
     Jt_GUID aGUID;
-    Jt_I32 aOffset, aLength;
+    Jt_I64 aOffset = 0;
     Jt_U32 aAttrib;
-    if (!aReader.ReadGUID(aGUID) || !aReader.ReadI32(aOffset) || !aReader.ReadI32(aLength) || !aReader.ReadU32(aAttrib))
+    Standard_Boolean aOk;
+    if (MajorVersion() >= 10)
+    {
+      Jt_U64 aOffsetU64 = 0;
+      Jt_U32 aLength;
+      aOk = aReader.ReadGUID(aGUID) && aReader.ReadU64(aOffsetU64) && aReader.ReadU32(aLength) && aReader.ReadU32(aAttrib);
+      aOffset = (Jt_I64)aOffsetU64;
+    }
+    else
+    {
+      Jt_I32 aOffset32 = 0, aLength32 = 0;
+      aOk = aReader.ReadGUID(aGUID) && aReader.ReadI32(aOffset32) && aReader.ReadI32(aLength32) && aReader.ReadU32(aAttrib);
+      aOffset = aOffset32;
+    }
+    if (!aOk)
     {
       return Standard_False;
     }
@@ -208,7 +239,7 @@ Standard_Boolean JtData_Model::readTOC(std::ifstream &theFile, const Jt_I32 theO
 //purpose  : Read objects from a JT file segment
 //=======================================================================
 Handle(JtData_Object) JtData_Model::readSegment(std::ifstream &theFile,
-                                                const Jt_I32 theOffset,
+                                                const Jt_I64 theOffset,
                                                 const Standard_Boolean theIsLSG) const
 {
   JtData_FileReader aReader(theFile, this, theOffset);
@@ -221,7 +252,7 @@ Handle(JtData_Object) JtData_Model::readSegment(std::ifstream &theFile,
   Jt_I32 aSize;
   if (!aReader.ReadGUID(aGUID) || !aReader.ReadI32(aType) || !aReader.ReadI32(aSize))
   {
-    ALARM("Error: Failed to read header of segment with offset " + theOffset);
+    ALARM("Error: Failed to read header of segment with offset " + (Standard_Integer)theOffset);
     return Handle(JtData_Object)();
   }
 
@@ -246,13 +277,15 @@ Handle(JtData_Object) JtData_Model::readSegment(std::ifstream &theFile,
     Jt_U8 aAlgorithm;
     if (!aReader.ReadI32(aFlag) || !aReader.ReadI32(aDataLength) || !aReader.ReadU8(aAlgorithm))
     {
-      ALARM("Error: Failed to read compression flags of segment with offset " + theOffset);
+      ALARM("Error: Failed to read compression flags of segment with offset " + (Standard_Integer)theOffset);
       return Handle(JtData_Object)();
     }
 
-    // if compressed, replace the reader by a JtData_Inflate instance
+    // if compressed, replace the reader by a JtData_Inflate (zlib) or JtData_XZDecompress (XZ)
     if (aFlag == 2 && aAlgorithm == 2)
       aDataReaderPtr = new JtData_Inflate(aReader, aDataLength - sizeof(Jt_U8));
+    else if (aAlgorithm == 3)
+      aDataReaderPtr = new JtData_XZDecompress(aReader, aDataLength - sizeof(Jt_U8));
   }
   }
 
@@ -283,7 +316,7 @@ Handle(JtData_Object) JtData_Model::readSegment(std::ifstream &theFile,
   {
 #ifdef OCCT_DEBUG
     Standard_Size aBytesRest = aBytesSpec - aReaderPos;
-    ALARM("Error: " + (aBytesRest) + " extra bytes were read after end of the segment");
+    ALARM("Error: extra bytes read after end of segment");
 #endif
     return Handle(JtData_Object)();
   }
@@ -291,7 +324,7 @@ Handle(JtData_Object) JtData_Model::readSegment(std::ifstream &theFile,
   {
 #ifdef OCCT_DEBUG
     Standard_Size aBytesRest = aBytesSpec - aReaderPos;
-    WARNING("Warning: " + aBytesRest + " segment bytes remained after reading, ignored");
+    WARNING("Warning: segment bytes remained after reading");
 #endif
   }
 
@@ -455,7 +488,6 @@ Standard_Boolean JtData_Model::readElement(JtData_Reader &theReader,
     ALARM("Error: Failed to read element length");
     return Standard_False;
   }
-
   // Start reading the element data
   Standard_Size anElemStart = theReader.GetPosition();
 
@@ -489,7 +521,10 @@ Standard_Boolean JtData_Model::readElement(JtData_Reader &theReader,
   }
   else
   {
-    // unknown object
+    // unknown object — warn unconditionally so users know geometry may be missing
+    Standard_Character aGuidString[128];
+    anObjectTypeID.ToString(aGuidString);
+    WARN_ALWAYS(Standard_CString("JtReader: unknown object type GUID ") + aGuidString + ", skipping element");
     theObject = new JtData_Object();
     return theReader.Skip(anElemStart + anElemLength - theReader.GetPosition());
   }
@@ -513,6 +548,9 @@ Standard_Boolean JtData_Model::readElement(JtData_Reader &theReader,
       return Standard_False;
   }
 
+  // Expose element end so node parsers can guard optional fields.
+  const_cast<JtData_Model*>(this)->SetCurrentElementEnd(anElemStart + anElemLength);
+
   if (!theObject->Read(theReader))
     return Standard_False;
 
@@ -521,16 +559,13 @@ Standard_Boolean JtData_Model::readElement(JtData_Reader &theReader,
   Standard_Size aReaderPos = theReader.GetPosition();
   if (aBytesSpec < aReaderPos)
   {
-#ifdef OCCT_DEBUG
-    Standard_Size aBytesRest = aReaderPos - aBytesSpec;
-    ALARM("Error: " + (aBytesRest) + " extra bytes were read after end of the element");
-#endif
+    ALARM("Error: extra bytes read after end of element");
     return Standard_False;
   }
   if (aBytesSpec > aReaderPos)
   {
     Standard_Size aBytesRest = aBytesSpec - aReaderPos;
-    WARNING("Warning: " + aBytesRest + " element bytes remained after reading, corrected");
+    WARNING("Warning: element bytes remained after reading");
     if (!theReader.Skip(aBytesRest))
       return Standard_False;
   }
@@ -543,7 +578,7 @@ Standard_Boolean JtData_Model::readElement(JtData_Reader &theReader,
 //purpose  : Lookup offset of a segment in TOCs of this model and its ancestor models
 //=======================================================================
 Handle(JtData_Model) JtData_Model::FindSegment(const Jt_GUID &theGUID,
-                                               Jt_I32 &theOffset) const
+                                               Jt_I64 &theOffset) const
 {
   if (myTOC.Find(theGUID, theOffset))
     return this;
@@ -562,7 +597,7 @@ Handle(JtData_Model) JtData_Model::FindSegment(const Jt_GUID &theGUID,
 //function : ReadSegment
 //purpose  : Read object from a late loaded segment
 //=======================================================================
-Handle(JtData_Object) JtData_Model::ReadSegment(const Jt_I32 theOffset) const
+Handle(JtData_Object) JtData_Model::ReadSegment(const Jt_I64 theOffset) const
 {
   ifstream aFile;
   if (!open(aFile))
