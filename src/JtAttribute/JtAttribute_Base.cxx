@@ -34,6 +34,10 @@ JtAttribute_Base::JtAttribute_Base()
 //=======================================================================
 Standard_Boolean JtAttribute_Base::Read (JtData_Reader& theReader)
 {
+  if (theReader.Model()->MajorVersion() >= 10)
+    return ReadV10 (theReader);
+
+  // Legacy path: JT 8.x / 9.x
   if (!JtData_Object::Read (theReader))
     return Standard_False;
 
@@ -44,6 +48,30 @@ Standard_Boolean JtAttribute_Base::Read (JtData_Reader& theReader)
   return theReader.ReadU8  (myStateFlags)
       && theReader.ReadU32 (myFieldInhibitFlags);
 }
+
+//=======================================================================
+//function : ReadV10
+//purpose  : Read JT 10+ Base Attribute Data (spec §6.1.2.1.1, Figure 46)
+//           I8 Version | U8 State Flags | U32 Field Inhibit Flags | U32 Field Final Flags
+//           Note: added U32 Field Final Flags vs JT 9.5; version type I8 vs I16.
+//=======================================================================
+Standard_Boolean JtAttribute_Base::ReadV10 (JtData_Reader& theReader)
+{
+  if (!JtData_Object::Read (theReader))
+    return Standard_False;
+
+  Jt_U8  aVersion;   // spec says I8; value=1 fits in U8
+  Jt_U32 aFieldFinalFlags;
+  if (!theReader.ReadU8  (aVersion))
+    return Standard_False;
+  myVersion = aVersion;
+
+  return theReader.ReadU8  (myStateFlags)
+      && theReader.ReadU32 (myFieldInhibitFlags)
+      && theReader.ReadU32 (aFieldFinalFlags);
+}
+
+
 
 //=======================================================================
 //function : Dump
