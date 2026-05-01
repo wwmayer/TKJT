@@ -88,7 +88,10 @@ public:
 
 public:
   //! Read this entity from a JT file.
-  Standard_EXPORT Standard_Boolean Read (JtData_Reader &theReader) Standard_OVERRIDE;
+  Standard_EXPORT Standard_Boolean Read    (JtData_Reader& theReader) Standard_OVERRIDE;
+
+  //! Read this entity from a JT 10+ file.
+  Standard_EXPORT Standard_Boolean ReadV10 (JtData_Reader& theReader);
 
   //! Dump this entity.
   Standard_EXPORT Standard_Integer Dump (Standard_OStream& S) const Standard_OVERRIDE;
@@ -109,9 +112,10 @@ protected:
   class VertexDataDecodeTask;
   class MeshDecodeTask;
 
-  Standard_Boolean readVertexShapeLODData (
-    JtData_Reader&   theReader,
-    Standard_Boolean theIsTriStripSet = Standard_False);
+  Standard_Boolean readVertexShapeLODData   (JtData_Reader& theReader,
+                                              Standard_Boolean theIsTriStripSet = Standard_False);
+  Standard_Boolean readVertexShapeLODDataV10(JtData_Reader& theReader,
+                                              Standard_Boolean theIsTriStripSet = Standard_False);
 
   Standard_Boolean readVertexBasedShapeCompressedRepData (JtData_Reader& theReader);
   Standard_Boolean readTopologicallyCompressedData       (JtData_Reader& theReader);

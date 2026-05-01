@@ -36,6 +36,10 @@ JtProperty_Base::JtProperty_Base()
 //=======================================================================
 Standard_Boolean JtProperty_Base::Read (JtData_Reader& theReader)
 {
+  if (theReader.Model()->MajorVersion() >= 10)
+    return ReadV10 (theReader);
+
+  // Legacy path: JT 8.x / 9.x
   if (!JtData_Object::Read (theReader))
     return Standard_False;
 
@@ -45,6 +49,26 @@ Standard_Boolean JtProperty_Base::Read (JtData_Reader& theReader)
 
   return theReader.ReadU32 (myStateFlags);
 }
+
+//=======================================================================
+//function : ReadV10
+//purpose  : Read JT 10+ Base Property Atom Data (spec §6.2.1.1, Figure 70)
+//           U8 Version | U32 State Flags
+//=======================================================================
+Standard_Boolean JtProperty_Base::ReadV10 (JtData_Reader& theReader)
+{
+  if (!JtData_Object::Read (theReader))
+    return Standard_False;
+
+  Jt_U8 aVersion;
+  if (!theReader.ReadU8 (aVersion))
+    return Standard_False;
+  myVersion = aVersion;
+
+  return theReader.ReadU32 (myStateFlags);
+}
+
+
 
 //=======================================================================
 //function : Dump

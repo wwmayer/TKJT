@@ -28,16 +28,49 @@ IMPLEMENT_OBJECT_CLASS(JtNode_Shape_Base, "Base Shape Object",
 //=======================================================================
 Standard_Boolean JtNode_Shape_Base::Read (JtData_Reader& theReader)
 {
+  if (theReader.Model()->MajorVersion() >= 10)
+    return ReadV10 (theReader);
+
+  // Legacy path: JT 8.x / 9.x
+  // JT 9.5 has a reserved BBoxF32 before the untransformed bbox; absent in v8.
   if (!JtNode_Base::Read (theReader))
     return Standard_False;
 
-  Jt_I16 aVersion;
-  if (theReader.Model()->MajorVersion() > 8
-  && !theReader.ReadI16 (aVersion))
-    return Standard_False;
+  if (theReader.Model()->MajorVersion() >= 9)
+  {
+    Jt_I16 aVersion;
+    if (!theReader.ReadI16 (aVersion))
+      return Standard_False;
+  }
 
   return theReader.ReadUniformStruct<Jt_F32> (myReservedBnd)
       && theReader.ReadUniformStruct<Jt_F32> (myUntransBnd)
+      && theReader.ReadF32   (myArea)
+      && theReader.ReadArray (myVertexRange)
+      && theReader.ReadArray (myNodeRange)
+      && theReader.ReadArray (myPolyRange)
+      && theReader.ReadI32   (mySize)
+      && theReader.ReadF32   (myCompression);
+}
+
+//=======================================================================
+//function : ReadV10
+//purpose  : Read JT 10+ Base Shape Data (spec §6.1.1.10.1, Figure 36)
+//           Base Node Data | U8 Version | BBoxF32 UntransformedBBox | F32 Area |
+//           Vertex Count Range | Node Count Range | Polygon Count Range |
+//           U32 Size | F32 Compression Level
+//           Note: reserved BBoxF32 present in JT 9.5 is removed in JT 10.
+//=======================================================================
+Standard_Boolean JtNode_Shape_Base::ReadV10 (JtData_Reader& theReader)
+{
+  if (!JtNode_Base::ReadV10 (theReader))
+    return Standard_False;
+
+  Jt_U8 aVersion;
+  if (!theReader.ReadU8 (aVersion))
+    return Standard_False;
+
+  return theReader.ReadUniformStruct<Jt_F32> (myUntransBnd)
       && theReader.ReadF32   (myArea)
       && theReader.ReadArray (myVertexRange)
       && theReader.ReadArray (myNodeRange)

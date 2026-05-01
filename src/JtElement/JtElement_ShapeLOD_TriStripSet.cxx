@@ -28,6 +28,9 @@ IMPLEMENT_OBJECT_CLASS(JtElement_ShapeLOD_TriStripSet, "Tri-Strip Set Shape LOD 
 //=======================================================================
 Standard_Boolean JtElement_ShapeLOD_TriStripSet::Read (JtData_Reader& theReader)
 {
+  if (theReader.Model()->MajorVersion() >= 10)
+    return ReadV10 (theReader);
+
   Jt_I16 aVersion;
   if (!readVertexShapeLODData (theReader, Standard_True)
    || !theReader.ReadI16 (aVersion))
@@ -37,6 +40,17 @@ Standard_Boolean JtElement_ShapeLOD_TriStripSet::Read (JtData_Reader& theReader)
     return readVertexBasedShapeCompressedRepData (theReader);
   else
     return Standard_True;
+}
+
+//=======================================================================
+//function : ReadV10
+//purpose  : Read this entity from a JT 10+ file
+//=======================================================================
+Standard_Boolean JtElement_ShapeLOD_TriStripSet::ReadV10 (JtData_Reader& theReader)
+{
+  Jt_U8 aVersion;
+  return readVertexShapeLODDataV10 (theReader, Standard_True)
+      && theReader.ReadU8 (aVersion);
 }
 
 //=======================================================================

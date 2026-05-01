@@ -28,6 +28,10 @@ IMPLEMENT_OBJECT_CLASS(JtNode_RangeLOD, "RangeLOD Object",
 //=======================================================================
 Standard_Boolean JtNode_RangeLOD::Read (JtData_Reader& theReader)
 {
+  if (theReader.Model()->MajorVersion() >= 10)
+    return ReadV10 (theReader);
+
+  // Legacy path: JT 8.x / 9.x
   if (!JtNode_LOD::Read (theReader))
     return Standard_False;
 
@@ -39,6 +43,26 @@ Standard_Boolean JtNode_RangeLOD::Read (JtData_Reader& theReader)
   return theReader.ReadVec          <Jt_F32> (myVecR)
       && theReader.ReadUniformStruct<Jt_F32> (myCenter);
 }
+
+//=======================================================================
+//function : ReadV10
+//purpose  : Read JT 10+ Range LOD Node Data (spec §6.1.1.8, Figure 33)
+//           Range LOD Node Data: LOD Node Data | U8 Version | VecF32 RangeLimits | CoordF32 Centre
+//=======================================================================
+Standard_Boolean JtNode_RangeLOD::ReadV10 (JtData_Reader& theReader)
+{
+  if (!JtNode_LOD::ReadV10 (theReader))
+    return Standard_False;
+
+  Jt_U8 aVersion;
+  if (!theReader.ReadU8 (aVersion))
+    return Standard_False;
+
+  return theReader.ReadVec          <Jt_F32> (myVecR)
+      && theReader.ReadUniformStruct<Jt_F32> (myCenter);
+}
+
+
 
 //=======================================================================
 //function : Dump

@@ -26,6 +26,8 @@ public:
   //! Read this entity from a JT file.
   Standard_EXPORT Standard_Boolean Read (JtData_Reader &theReader) Standard_OVERRIDE;
 
+  Standard_EXPORT virtual Standard_Boolean ReadV10 (JtData_Reader& theReader) Standard_OVERRIDE;
+
   //! Dump this entity.
   Standard_EXPORT Standard_Integer Dump (Standard_OStream& S) const Standard_OVERRIDE;
 

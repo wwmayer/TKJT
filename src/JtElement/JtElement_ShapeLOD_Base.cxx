@@ -28,6 +28,9 @@ IMPLEMENT_OBJECT_CLASS(JtElement_ShapeLOD_Base, "Base Shape LOD Object",
 //=======================================================================
 Standard_Boolean JtElement_ShapeLOD_Base::Read (JtData_Reader& theReader)
 {
+  if (theReader.Model()->MajorVersion() >= 10)
+    return ReadV10 (theReader);
+
   if (!JtData_Object::Read (theReader))
     return Standard_False;
 
@@ -37,6 +40,19 @@ Standard_Boolean JtElement_ShapeLOD_Base::Read (JtData_Reader& theReader)
 
   Jt_I16 aVersion;
   return theReader.ReadI16 (aVersion);
+}
+
+//=======================================================================
+//function : ReadV10
+//purpose  : Read this entity from a JT 10+ file
+//=======================================================================
+Standard_Boolean JtElement_ShapeLOD_Base::ReadV10 (JtData_Reader& theReader)
+{
+  if (!JtData_Object::Read (theReader))
+    return Standard_False;
+
+  Jt_U8 aVersion;
+  return theReader.ReadU8 (aVersion);
 }
 
 //=======================================================================

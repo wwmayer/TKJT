@@ -33,4 +33,8 @@
 #define ALARM(msg)   MESSAGE(msg, Message_Alarm)
 #define FAIL(msg)    MESSAGE(msg, Message_Fail)
 
+// Always-on warning: fires in both debug and release builds.
+#define WARN_ALWAYS(msg) \
+  ::Message::DefaultMessenger()->Send (TCollection_ExtendedString() + msg, Message_Warning)
+
 #endif // _JtData_Message_HeaderFile

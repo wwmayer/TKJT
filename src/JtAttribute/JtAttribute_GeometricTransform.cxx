@@ -44,6 +44,10 @@ namespace
 //=======================================================================
 Standard_Boolean JtAttribute_GeometricTransform::Read (JtData_Reader& theReader)
 {
+  if (theReader.Model()->MajorVersion() >= 10)
+    return ReadV10 (theReader);
+
+  // Legacy path: JT 8.x / 9.x
   if (!JtAttribute_Base::Read (theReader))
     return Standard_False;
 
@@ -71,13 +75,46 @@ Standard_Boolean JtAttribute_GeometricTransform::Read (JtData_Reader& theReader)
         return Standard_False;
     }
     else
-    {
       myTransform[anIter] = THE_IDENTITY[anIter];
-    }
   }
 
   return Standard_True;
 }
+
+//=======================================================================
+//function : ReadV10
+//purpose  : Read JT 10+ Geometric Transform Attribute Element (spec §6.1.2.10, Figure 63)
+//           Base Attribute Data | I8 Version | U16 Stored Values Mask | 16x (cond) F64
+//=======================================================================
+Standard_Boolean JtAttribute_GeometricTransform::ReadV10 (JtData_Reader& theReader)
+{
+  if (!JtAttribute_Base::ReadV10 (theReader))
+    return Standard_False;
+
+  Jt_U8            aVersion;
+  Standard_Integer aStoredValuesMask;
+  if (!theReader.ReadU8  (aVersion)
+   || !theReader.ReadU16 (aStoredValuesMask))
+    return Standard_False;
+
+  Standard_Integer aMask = 0x8000;
+  for (Standard_Integer anIter = 0; anIter < 16; ++anIter, aMask >>= 1)
+  {
+    if (aStoredValuesMask & aMask)
+    {
+      Jt_F64 aVal;
+      if (!theReader.ReadF64 (aVal))
+        return Standard_False;
+      myTransform[anIter] = aVal;
+    }
+    else
+      myTransform[anIter] = THE_IDENTITY[anIter];
+  }
+
+  return Standard_True;
+}
+
+
 
 //=======================================================================
 //function : Dump

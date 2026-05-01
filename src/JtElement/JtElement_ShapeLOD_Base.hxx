@@ -26,7 +26,10 @@ class JtElement_ShapeLOD_Base : public JtData_Object
 {
 public:
   //! Read this entity from a JT file.
-  Standard_EXPORT Standard_Boolean Read (JtData_Reader& theReader) Standard_OVERRIDE;
+  Standard_EXPORT Standard_Boolean Read    (JtData_Reader& theReader) Standard_OVERRIDE;
+
+  //! Read this entity from a JT 10+ file.
+  Standard_EXPORT Standard_Boolean ReadV10 (JtData_Reader& theReader);
 
   //! Dump this entity.
   Standard_EXPORT Standard_Integer Dump (Standard_OStream& theStream) const Standard_OVERRIDE;

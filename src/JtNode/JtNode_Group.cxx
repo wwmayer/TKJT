@@ -29,16 +29,41 @@ IMPLEMENT_OBJECT_CLASS(JtNode_Group, "Group Object",
 //=======================================================================
 Standard_Boolean JtNode_Group::Read (JtData_Reader& theReader)
 {
+  if (theReader.Model()->MajorVersion() >= 10)
+    return ReadV10 (theReader);
+
+  // Legacy path: JT 8.x / 9.x
   if (!JtNode_Base::Read (theReader))
     return Standard_False;
 
-  Jt_I16 aVersion;
-  if (theReader.Model()->MajorVersion() > 8
-  && !theReader.ReadI16 (aVersion))
+  if (theReader.Model()->MajorVersion() >= 9)
+  {
+    Jt_I16 aVersion;
+    if (!theReader.ReadI16 (aVersion))
+      return Standard_False;
+  }
+
+  return JtData_DeferredObject::ReadVec (theReader, myChildren);
+}
+
+//=======================================================================
+//function : ReadV10
+//purpose  : Read JT 10+ Group Node Data (spec §6.1.1.2.1)
+//           Group Node Data: Base Node Data | U8 Version | I32 Child Count | I32[count]
+//=======================================================================
+Standard_Boolean JtNode_Group::ReadV10 (JtData_Reader& theReader)
+{
+  if (!JtNode_Base::ReadV10 (theReader))
+    return Standard_False;
+
+  Jt_U8 aVersion;
+  if (!theReader.ReadU8 (aVersion))
     return Standard_False;
 
   return JtData_DeferredObject::ReadVec (theReader, myChildren);
 }
+
+
 
 //=======================================================================
 //function : Dump
