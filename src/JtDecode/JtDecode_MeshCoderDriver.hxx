@@ -40,7 +40,6 @@ public:
     JtDecode_Int32CDP _vuOutFaceFlags;
     JtDecode_Int32CDP _vvuOutAttrMasks[8];
     JtDecode_Int32CDP _faceAttributeMask8_30;
-    JtDecode_Int32CDP _faceAttributeMask8_4;
     JtDecode_Int32CDP _vuOutAttrMasksLrg;
     JtDecode_Int32CDP _viOutSplitVtxSyms;
     JtDecode_Int32CDP _viOutSplitPosSyms;
@@ -82,7 +81,6 @@ private:
   Jt_VecI32 _vuOutFaceFlags;
   Jt_VecI32 _vvuOutAttrMasks[8];
   Jt_VecI32 _faceAttributeMask8_30;
-  Jt_VecI32 _faceAttributeMask8_4;
   Jt_VecU32 _vuOutAttrMasksLrg;
   Jt_VecI32 _viOutSplitVtxSyms;
   Jt_VecI32 _viOutSplitPosSyms;

@@ -34,4 +34,4 @@
 **/build/**
 **/debug/**
 **/release/**
-.vscode
+.vscodebuild_debug/

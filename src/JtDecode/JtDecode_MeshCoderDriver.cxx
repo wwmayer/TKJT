@@ -1220,7 +1220,6 @@ void JtDecode_MeshCoderDriver::SetInputData (InputData& theData)
   aScheduler.Run (theData._viOutFGrpSyms        , _viOutFGrpSyms);
   aScheduler.Run (theData._vuOutFaceFlags       , _vuOutFaceFlags         , JtDecode_Unpack_Lag1);
   aScheduler.Run (theData._faceAttributeMask8_30, _faceAttributeMask8_30);
-  aScheduler.Run (theData._faceAttributeMask8_4 , _faceAttributeMask8_4);
   aScheduler.Run (theData._vuOutAttrMasksLrg    , _vuOutAttrMasksLrg);
   aScheduler.Run (theData._viOutSplitVtxSyms    , _viOutSplitVtxSyms      , JtDecode_Unpack_Lag1);
   aScheduler.Run (theData._viOutSplitPosSyms    , _viOutSplitPosSyms);
@@ -1396,8 +1395,7 @@ int64_t JtDecode_MeshCoderDriver::_nextAttrMaskSymbol (int32_t iCCntx)
 
   if (iCCntx == 7)
   {
-    eSym |= (((int64_t) _faceAttributeMask8_4 [readpos]) << 30) +
-            (((int64_t) _faceAttributeMask8_30[readpos]) << 30);
+    eSym |= (((int64_t) _faceAttributeMask8_30[readpos]) << 30);
   }
   
   _iAttrMaskReadPos[iCCntx]++;

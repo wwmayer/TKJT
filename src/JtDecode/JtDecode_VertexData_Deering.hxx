@@ -23,10 +23,17 @@
 class JtDecode_VertexData_Deering : public JtDecode_VertexData
 {
 public:
-  //! Constructor.
+  //! Constructor (V8/V9): 4 CDPs — sextant, octant, theta, psi as separate streams.
   Standard_EXPORT JtDecode_VertexData_Deering (
     const Jt_U8 theNbBits,
     JtDecode_Unpack& theUnpacker = JtDecode_Unpack_Null);
+
+  //! Constructor (V10): 1 CDP containing packed [sextant:3][octant:3][theta:n][psi:n] per normal.
+  //! Spec ref: Fig 139, Compressed Vertex Normal Array (JT v10 Rev C, p.165-166) and
+  //!           Annex B.4.2 DeeringNormalCodec::unpackCode (p.237-238).
+  Standard_EXPORT JtDecode_VertexData_Deering (
+    const Jt_U8 theNbBits,
+    const Standard_Boolean theIsV10);
 
 protected:
   //! Get expected count of output components.
@@ -35,7 +42,8 @@ protected:
   //! Decoding method.
   Standard_EXPORT void decode (Decoded::Ref theResults) Standard_OVERRIDE;
 
-  Jt_U8 myNbBits;
+  Jt_U8            myNbBits;
+  Standard_Boolean myIsV10;
 };
 
 #endif

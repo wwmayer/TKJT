@@ -68,7 +68,19 @@ namespace
 JtDecode_VertexData_Deering::JtDecode_VertexData_Deering (const Jt_U8      theNbBits,
                                                           JtDecode_Unpack& theUnpacker)
   : JtDecode_VertexData (4, theUnpacker)
-  , myNbBits (theNbBits) {}
+  , myNbBits (theNbBits)
+  , myIsV10 (Standard_False) {}
+
+// V10 constructor: 1 CDP, packed code = [sextant:3][octant:3][theta:n][psi:n]
+// Spec ref: Fig 139 (JT v10 Rev C, p.165-166); Annex B.4.2 unpackCode (p.237-238)
+JtDecode_VertexData_Deering::JtDecode_VertexData_Deering (const Jt_U8            theNbBits,
+                                                          const Standard_Boolean theIsV10)
+  : JtDecode_VertexData (1, JtDecode_Unpack_Null)
+  , myNbBits (theNbBits)
+  , myIsV10 (Standard_True)
+{
+  (void)theIsV10; // always true; parameter is only for overload disambiguation
+}
 
 Standard_Integer JtDecode_VertexData_Deering::getOutCompCount (Standard_Size)
 {
@@ -77,6 +89,50 @@ Standard_Integer JtDecode_VertexData_Deering::getOutCompCount (Standard_Size)
 
 void JtDecode_VertexData_Deering::decode (Decoded::Ref theResults)
 {
+  if (myIsV10)
+  {
+    // V10: single CDP with packed codes, one per normal.
+    // Spec ref: Fig 139 (JT v10 Rev C, p.165-166); Annex B.4.2 unpackCode (p.237-238):
+    //   code layout = [sextant:3][octant:3][theta:numBits][psi:numBits]
+    Jt_VecI32 aCodes (decodePackage (0));
+    Standard_Integer anOffset = TABLE_BITS - myNbBits;
+    Jt_U32 aMask = myNbBits ? ((1u << myNbBits) - 1u) : 0u;
+    for (Decoded::SizeType i = 0; i < theResults.Count(); ++i)
+    {
+      Jt_U32 aCode    = static_cast<Jt_U32> (aCodes[i]);
+      Jt_U32 aSextant = (aCode >> (2 * myNbBits + 3)) & 7u;
+      Jt_U32 anOctant = (aCode >> (2 * myNbBits))     & 7u;
+      Jt_U32 aTheta   = (aCode >>      myNbBits)       & aMask;
+      Jt_U32 aPsi     =  aCode                         & aMask;
+
+      const SinCos& aThetaPar = LOOKUP_TABLE.Theta[(aTheta + (aSextant & 1)) << anOffset];
+      const SinCos& aPsiPar   = LOOKUP_TABLE.Psi  [ aPsi                     << anOffset];
+
+      Jt_F32 x = static_cast <Jt_F32> (aPsiPar.Cos * aThetaPar.Cos);
+      Jt_F32 y = static_cast <Jt_F32> (aPsiPar.Sin);
+      Jt_F32 z = static_cast <Jt_F32> (aPsiPar.Cos * aThetaPar.Sin);
+
+      Jt_DirF32 aResult;
+      switch (aSextant)
+      {
+      default:
+      case 0: aResult.X = x;  aResult.Y = y;  aResult.Z = z;  break; // No op
+      case 1: aResult.X = z;  aResult.Y = y;  aResult.Z = x;  break; // Mirror about x=z
+      case 2: aResult.X = y;  aResult.Y = z;  aResult.Z = x;  break; // Rotate CW
+      case 3: aResult.X = y;  aResult.Y = x;  aResult.Z = z;  break; // Mirror about x=y
+      case 4: aResult.X = z;  aResult.Y = x;  aResult.Z = y;  break; // Rotate CCW
+      case 5: aResult.X = x;  aResult.Y = z;  aResult.Z = y;  break; // Mirror about y=z
+      }
+
+      if ((anOctant & 4) == 0) aResult.X = -aResult.X;
+      if ((anOctant & 2) == 0) aResult.Y = -aResult.Y;
+      if ((anOctant & 1) == 0) aResult.Z = -aResult.Z;
+
+      theResults[i] = aResult;
+    }
+    return;
+  }
+
   Jt_VecU32 aSextantCodes, anOctantCodes, aThetaCodes, aPsiCodes;
 
   JtData_Parallel::TaskGroup aDecodeTasks;
