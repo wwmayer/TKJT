@@ -72,7 +72,15 @@ public:
   //! Load CDP2 encoded data from the reader.
   Standard_Boolean Load2 (JtData_Reader& theReader)
   {
-    myEncodedData = loadCDP2 (theReader);
+    myEncodedData = loadCDP_V10 (theReader);
+    return !!myEncodedData;
+  }
+
+  //! Load JT 10+ CDP data from the reader (Fig 132 of JT v10 spec).
+  //! Written from spec only — does NOT reuse loadCDP1/loadCDP2.
+  Standard_Boolean LoadV10 (JtData_Reader& theReader)
+  {
+    myEncodedData = loadCDP_V10 (theReader);
     return !!myEncodedData;
   }
 
@@ -128,6 +136,7 @@ protected:
 protected:
   Standard_EXPORT static EncodedDataHandle loadCDP1 (JtData_Reader& theReader);
   Standard_EXPORT static EncodedDataHandle loadCDP2 (JtData_Reader& theReader);
+  Standard_EXPORT static EncodedDataHandle loadCDP_V10 (JtData_Reader& theReader);
 
 
   DecodedData::Mover decode (JtDecode_Unpack& theUnpacker = JtDecode_Unpack_Null)

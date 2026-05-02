@@ -16,6 +16,7 @@
 
 #include <JtDecode_VertexData_Quantized.hxx>
 #include <JtData_VectorRef.hxx>
+#include <cstdint>
 
 Standard_Boolean JtDecode_VertexData_Quantized::UniformQuantizerData::Read (JtData_Reader& theReader)
 {
@@ -48,17 +49,32 @@ void JtDecode_VertexData_Quantized::decode (Decoded::Ref theResults)
     const UniformQuantizerData& aCurQuantizerData =
       JtData_VectorRef<const UniformQuantizerData> (myQuantizerData)[j];
 
-    Standard_Real    aMin  = aCurQuantizerData.min;
-    Standard_Real    aMax  = aCurQuantizerData.max;
     Standard_Integer aBits = aCurQuantizerData.bits;
 
-    Standard_Real aMaxCode = aBits < 32 ? (1 << aBits) : 0xFFFFFFFF;
-    Standard_Real aDecodeMultiplier = (aMax - aMin) / aMaxCode;
-
-    for (Decoded::SizeType i = 0; i < theResults.Count(); i++)
+    if (aBits == 0)
     {
-      Standard_Real aValue = aMin + (static_cast<Jt_U32>(aCodes[i]) - 0.5) * aDecodeMultiplier;
-      theResults[i][j] = static_cast <float> (aValue);
+      // JT v10 spec Fig 138/139 (Rev C, p.164-165): when Quantization Bits == 0,
+      // the CDP stores the raw IEEE-754 binary representation of each float component
+      // ("fed directly into the Lag1 predictor as if they were integers").
+      // Decode by reinterpreting each decoded I32 code as a float bit-pattern.
+      for (Decoded::SizeType i = 0; i < theResults.Count(); i++)
+      {
+        uint32_t aBits32 = static_cast<uint32_t> (aCodes[i]);
+        theResults[i][j] = *reinterpret_cast<const float*> (&aBits32);
+      }
+    }
+    else
+    {
+      Standard_Real    aMin  = aCurQuantizerData.min;
+      Standard_Real    aMax  = aCurQuantizerData.max;
+      Standard_Real aMaxCode = aBits < 32 ? (1 << aBits) : 0xFFFFFFFF;
+      Standard_Real aDecodeMultiplier = (aMax - aMin) / aMaxCode;
+
+      for (Decoded::SizeType i = 0; i < theResults.Count(); i++)
+      {
+        Standard_Real aValue = aMin + (static_cast<Jt_U32>(aCodes[i]) - 0.5) * aDecodeMultiplier;
+        theResults[i][j] = static_cast <float> (aValue);
+      }
     }
   }
 }

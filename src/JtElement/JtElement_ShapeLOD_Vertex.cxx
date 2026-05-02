@@ -291,10 +291,14 @@ Standard_Boolean JtElement_ShapeLOD_Vertex::readVertexShapeLODData (
 //=======================================================================
 //function : readVertexShapeLODDataV10
 //purpose  : Read Vertex Shape LOD Data collection for JT 10+
-//           Base Shape LOD Data   : U8 version
-//           Vertex Shape LOD Data : U8 version + U64 Vertex Bindings
-//           TopoMesh LOD Data     : U8 version + U32 Vertex Records Object ID
-//           TopoMesh Topo Compressed LOD Data : U8 version + rep data
+//           Spec ref: JT v10 Rev C, Fig 85 — Vertex Shape LOD Data collection
+//           Base Shape LOD Data      : U8 version
+//           I8 : Version Number
+//           U64 : Vertex Bindings
+//           Logical Element Header   : I32 length + GUID + U8 base_type + I32 obj_id (V10+)
+//           TopoMesh LOD Data        : U8 version + U32 Vertex Records Object ID (Fig 88)
+//           TopoMesh TopoCmp version : U8 (Fig 91)
+//           Topologically Compressed Rep Data (Fig 92) via readTopologicallyCompressedData
 //=======================================================================
 Standard_Boolean JtElement_ShapeLOD_Vertex::readVertexShapeLODDataV10 (
   JtData_Reader&   theReader,
@@ -304,16 +308,33 @@ Standard_Boolean JtElement_ShapeLOD_Vertex::readVertexShapeLODDataV10 (
   myVertices.Free();
   myNormals.Free();
 
-  Jt_U8 aVersion, aMeshLODVersion, aTopoCompVersion;
-  Jt_U32 aVertexRecordsObjID;
+  Jt_U8    aVersion, aNestedBaseType, aMeshLODVersion, aTopoCompVersion;
+  Jt_I32   aNestedElemLen, aNestedObjID;
+  Jt_GUID  aNestedGUID;
+  Jt_U32   aVertexRecordsObjID;
   VertexBinding2 aVertexBinding;
 
-  if (!JtElement_ShapeLOD_Base::ReadV10 (theReader)  // JtData_Object::Read + U8 base version
-   || !theReader.ReadU8 (aVersion)                    // Vertex Shape LOD Data version
+  // JT v10 Rev C Fig 85 — Vertex Shape LOD Data collection.
+  // After Vertex Bindings, a Logical Element Header wraps the nested
+  // TopoMesh Topologically Compressed LOD Data element:
+  //   I32  Element Length              (Spec §5.1.3.2.1 Logical Element Header)
+  //   GUID Object Type ID              (TopoMesh TopoCmp type: {F830A5AD-…})
+  //   U8   Object Base Type
+  //   I32  Object ID                   (present in JT v10+, readElement §482)
+  // Then the element body:
+  //   U8   TopoMesh LOD Data version   (Fig 88)
+  //   U32  Vertex Records Object ID    (Fig 88)
+  //   U8   TopoMesh TopoCmp version    (Fig 91)
+  if (!JtElement_ShapeLOD_Base::ReadV10 (theReader)  // Base Shape LOD Data: U8 version
+   || !theReader.ReadU8  (aVersion)                   // Vertex Shape LOD Data: I8 version
    || !aVertexBinding.Read (theReader)                // U64 Vertex Bindings
-   || !theReader.ReadU8 (aMeshLODVersion)             // TopoMesh LOD Data version
-   || !theReader.ReadU32 (aVertexRecordsObjID)        // Vertex Records Object ID
-   || !theReader.ReadU8 (aTopoCompVersion))           // TopoMesh Topologically Compressed LOD Data version
+   || !theReader.ReadI32 (aNestedElemLen)             // Logical Element Header: I32 length
+   || !theReader.ReadGUID (aNestedGUID)               // Logical Element Header: GUID
+   || !theReader.ReadU8  (aNestedBaseType)            // Logical Element Header: U8 base type
+   || !theReader.ReadI32 (aNestedObjID)               // Logical Element Header: I32 obj_id (V10+)
+   || !theReader.ReadU8  (aMeshLODVersion)            // TopoMesh LOD Data: U8 version (Fig 88)
+   || !theReader.ReadU32 (aVertexRecordsObjID)        // TopoMesh LOD Data: U32 vertex records obj_id
+   || !theReader.ReadU8  (aTopoCompVersion))          // TopoMesh TopoCmp LOD Data: U8 version (Fig 91)
   {
     return Standard_False;
   }

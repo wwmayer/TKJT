@@ -50,6 +50,10 @@ public:
   //! Read the probability table for Mark II codec.
   Standard_Boolean ReadMk2   (JtDecode_BitReader::Raw& theReader);
 
+  //! Read the probability table in JT 10+ format (Fig 133/134 of JT10 spec).
+  //! Completely independent from ReadMk2/ReadFirst/ReadNext; written from spec only.
+  Standard_Boolean ReadV10   (JtDecode_BitReader::Raw& theReader);
+
   //! Fetch the entry.
   const Entry& operator[] (Standard_Size theIndex) const { return myEntries[theIndex]; }
 

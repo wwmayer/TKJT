@@ -94,6 +94,7 @@ add_library (TKJT SHARED ${TKJT_HEADERS} ${TKJT_SOURCES})
 target_link_libraries (TKJT ${OCCT_LIB})
 target_link_libraries (TKJT ${TBB_LIB})
 target_link_libraries (TKJT ${ZLIB_LIB})
+target_link_libraries (TKJT lzma)
 
 if (BUILD_PROJECT STREQUAL "TKJT")
   set_target_properties (TKJT PROPERTIES PUBLIC_HEADER "${TKJT_HEADERS}")
